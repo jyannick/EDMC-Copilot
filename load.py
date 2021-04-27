@@ -7,6 +7,7 @@ import logging
 from EDMCOverlay import edmcoverlay
 
 route = None
+parent_application = None
 OVERLAY = None
 logger = None
 
@@ -50,6 +51,11 @@ def plugin_start3(plugin_dir: str) -> str:
     return f"Copilot v{PLUGIN_VERSION}"
 
 
+def plugin_app(parent):
+    global parent_application
+    parent_application = parent
+
+
 def journal_entry(
     cmdr: str,
     is_beta: bool,
@@ -71,8 +77,26 @@ def journal_entry(
             )
     if entry["event"] == "FSDJump":
         if entry["StarSystem"] in route["System Name"]:
-            next_system_index = route["System Name"].index(entry["StarSystem"]) + 1
-            next_system = route["System Name"][next_system_index]
+            current_system_index = route["System Name"].index(entry["StarSystem"])
+            logger.info(
+                f"Current system is {entry['StarSystem']} (index {current_system_index})."
+                + f"Refuel: {route['Refuel'][current_system_index]}"
+            )
+            if route["Refuel"][current_system_index] == "Yes":
+                OVERLAY.send_message(
+                    "Copilot",
+                    f"Refuel now",
+                    "#ff9966",
+                    x=520,
+                    y=200,
+                    ttl=10,
+                    size="large",
+                )
+            next_system = route["System Name"][current_system_index + 1]
+            global parent_application
+            parent_application.clipboard_clear()
+            parent_application.clipboard_append(next_system)
+            parent_application.update()
             OVERLAY.send_message(
                 "Copilot",
                 f"Next waypoint: {next_system}",
