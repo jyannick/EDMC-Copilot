@@ -6,6 +6,7 @@ import logging
 
 from EDMCOverlay import edmcoverlay
 
+route = None
 OVERLAY = None
 logger = None
 
@@ -44,7 +45,8 @@ def plugin_start3(plugin_dir: str) -> str:
     """
     global OVERLAY
     OVERLAY = edmcoverlay.Overlay()
-    read_route()
+    global route
+    route = read_route()
     return f"Copilot v{PLUGIN_VERSION}"
 
 
@@ -57,28 +59,33 @@ def journal_entry(
     state: Mapping[str, Any],
 ) -> None:
     if entry["event"] == "StartJump" and entry["JumpType"] == "Hyperspace":
-        OVERLAY.send_message(
-            "Copilot",
-            f"Jumping to {entry['StarSystem']}",
-            "#aaf9ff",
-            x=520,
-            y=120,
-            ttl=3,
-            size="large",
-        )
+        if entry["StarClass"] == "N":
+            OVERLAY.send_message(
+                "Copilot",
+                f"WARNING Neutron Star ahead",
+                "#ff0000",
+                x=520,
+                y=410,
+                ttl=5,
+                size="large",
+            )
     if entry["event"] == "FSDJump":
-        OVERLAY.send_message(
-            "Copilot",
-            f"Arrived at {entry['StarSystem']}",
-            "#aaf9ff",
-            x=520,
-            y=120,
-            ttl=3,
-            size="large",
-        )
+        if entry["StarSystem"] in route["System Name"]:
+            next_system_index = route["System Name"].index(entry["StarSystem"]) + 1
+            next_system = route["System Name"][next_system_index]
+            OVERLAY.send_message(
+                "Copilot",
+                f"Next waypoint: {next_system}",
+                "#aaf9ff",
+                x=500,
+                y=200,
+                ttl=3,
+                size="large",
+            )
 
 
 def read_route():
     with open(os.path.join(PLUGIN_DIRECTORY, "route.csv"), "r") as f:
-        for line in f.readlines():
-            logger.info(line)
+        lines = [[field[1:-1] for field in line.split(",")] for line in f.readlines()]
+    route = {name: [line[i] for line in lines[1:]] for i, name in enumerate(lines[0])}
+    return route
