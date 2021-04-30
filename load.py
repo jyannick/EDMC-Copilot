@@ -1,5 +1,6 @@
 import os
-from typing import Any, MutableMapping, Mapping
+from typing import Any, MutableMapping, Mapping, Optional
+import tkinter as tk
 
 from config import appname, appversion
 import logging
@@ -46,14 +47,24 @@ def plugin_start3(plugin_dir: str) -> str:
     """
     global OVERLAY
     OVERLAY = edmcoverlay.Overlay()
+    check_overlay_message()
     global route
     route = read_route()
     return f"Copilot v{PLUGIN_VERSION}"
 
 
-def plugin_app(parent):
+def plugin_app(parent: tk.Frame) -> Optional[tk.Frame]:
     global parent_application
+    global OVERLAY
     parent_application = parent
+    frame = tk.Frame(parent)
+    button = tk.Button(
+        frame,
+        text="Test overlay",
+        command=check_overlay_message,
+    )
+    button.grid(row=0)
+    return frame
 
 
 def journal_entry(
@@ -67,7 +78,7 @@ def journal_entry(
     if entry["event"] == "StartJump" and entry["JumpType"] == "Hyperspace":
         if entry["StarClass"] == "N":
             OVERLAY.send_message(
-                "Copilot",
+                "Copilot-neutron-warning",
                 f"WARNING Neutron Star ahead",
                 "#ff0000",
                 x=520,
@@ -80,32 +91,51 @@ def journal_entry(
             current_system_index = route["System Name"].index(entry["StarSystem"])
             logger.info(
                 f"Current system is {entry['StarSystem']} (index {current_system_index})."
-                + f"Refuel: {route['Refuel'][current_system_index]}"
             )
             if route["Refuel"][current_system_index] == "Yes":
+                logger.info(f" Refuel: {route['Refuel'][current_system_index]}")
                 OVERLAY.send_message(
-                    "Copilot",
+                    "Copilot-refuel",
                     f"Refuel now",
                     "#ff9966",
-                    x=520,
-                    y=200,
-                    ttl=10,
+                    x=600,
+                    y=410,
+                    ttl=20,
                     size="large",
                 )
+            route_distance = float(route["Distance Remaining"][0])
+            distance_remaining = float(
+                route["Distance Remaining"][current_system_index]
+            )
             next_system = route["System Name"][current_system_index + 1]
             global parent_application
             parent_application.clipboard_clear()
             parent_application.clipboard_append(next_system)
             parent_application.update()
             OVERLAY.send_message(
-                "Copilot",
-                f"Next waypoint: {next_system}",
+                "Copilot-next-waypoint",
+                f"Next waypoint: {next_system}\n"
+                + f"Distance remaining: {distance_remaining:.2f}ly\n"
+                + f"Progress: {(1-distance_remaining/route_distance)*100:.2f}%",
                 "#aaf9ff",
                 x=500,
-                y=200,
-                ttl=3,
+                y=70,
+                ttl=10,
                 size="large",
             )
+
+
+def check_overlay_message():
+    global OVERLAY
+    OVERLAY.send_message(
+        "Copilot",
+        f"Copilot overlay is operational",
+        "#ff9966",
+        x=520,
+        y=200,
+        ttl=10,
+        size="large",
+    )
 
 
 def read_route():
