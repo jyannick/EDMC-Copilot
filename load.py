@@ -75,7 +75,7 @@ def journal_entry(
     entry: MutableMapping[str, Any],
     state: Mapping[str, Any],
 ) -> None:
-    if entry["event"] == "StartJump" and entry["JumpType"] == "Hyperspace":
+    if entry["event"] == "FsdJump":
         if entry["StarClass"] == "N":
             OVERLAY.send_message(
                 "Copilot-neutron-warning",
@@ -86,7 +86,7 @@ def journal_entry(
                 ttl=5,
                 size="large",
             )
-    if entry["event"] == "FSDJump":
+    if entry["event"] in ["FsdJump", "Location"]:
         if entry["StarSystem"] in route["System Name"]:
             current_system_index = route["System Name"].index(entry["StarSystem"])
             logger.info(
