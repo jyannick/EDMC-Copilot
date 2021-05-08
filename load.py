@@ -64,6 +64,12 @@ def plugin_app(parent: tk.Frame) -> Optional[tk.Frame]:
         command=check_overlay_message,
     )
     button.grid(row=0)
+    route_button = tk.Button(
+        frame,
+        text="Refresh route",
+        command=read_route,
+    )
+    route_button.grid(row=1)
     return frame
 
 
@@ -75,7 +81,7 @@ def journal_entry(
     entry: MutableMapping[str, Any],
     state: Mapping[str, Any],
 ) -> None:
-    if entry["event"] == "FsdJump":
+    if entry["event"] == "StartJump":
         if entry["StarClass"] == "N":
             OVERLAY.send_message(
                 "Copilot-neutron-warning",
@@ -86,7 +92,7 @@ def journal_entry(
                 ttl=5,
                 size="large",
             )
-    if entry["event"] in ["FsdJump", "Location"]:
+    if entry["event"] in ["FSDJump", "Location"]:
         if entry["StarSystem"] in route["System Name"]:
             current_system_index = route["System Name"].index(entry["StarSystem"])
             logger.info(
@@ -139,6 +145,7 @@ def check_overlay_message():
 
 
 def read_route():
+    logger.info("Reading route file")
     with open(os.path.join(PLUGIN_DIRECTORY, "route.csv"), "r") as f:
         lines = [[field[1:-1] for field in line.split(",")] for line in f.readlines()]
     route = {name: [line[i] for line in lines[1:]] for i, name in enumerate(lines[0])}
